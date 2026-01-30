@@ -20,8 +20,8 @@ impl MappingPipeline {
         Self { mappers: Vec::new() }
     }
     
-    /// Add a mapper to the pipeline
-    pub fn add<M: Mapper + 'static>(mut self, mapper: M) -> Self {
+    /// Add a mapper to the pipeline (builder pattern)
+    pub fn with<M: Mapper + 'static>(mut self, mapper: M) -> Self {
         self.mappers.push(Box::new(mapper));
         self
     }
@@ -54,7 +54,7 @@ mod tests {
     #[test]
     fn test_pipeline_single_mapper() {
         let pipeline = MappingPipeline::new()
-            .add(LinearMapper::new("test", 0.0, 100.0, 0.0, 1.0));
+            .with(LinearMapper::new("test", 0.0, 100.0, 0.0, 1.0));
         
         assert!(!pipeline.is_empty());
         assert_eq!(pipeline.apply(0.0), 0.0);
@@ -65,8 +65,8 @@ mod tests {
     #[test]
     fn test_pipeline_chained_mappers() {
         let pipeline = MappingPipeline::new()
-            .add(LinearMapper::new("first", 0.0, 100.0, 0.0, 10.0))
-            .add(LinearMapper::new("second", 0.0, 10.0, 100.0, 200.0));
+            .with(LinearMapper::new("first", 0.0, 100.0, 0.0, 10.0))
+            .with(LinearMapper::new("second", 0.0, 10.0, 100.0, 200.0));
         
         // 50 -> 5.0 -> 150.0
         assert_eq!(pipeline.apply(50.0), 150.0);

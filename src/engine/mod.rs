@@ -93,7 +93,7 @@ impl Engine {
 mod tests {
     use super::*;
     use crate::config::{AudioConfig, MasterConfig};
-    use std::collections::HashMap;
+    
 
     fn test_config() -> DriftConfig {
         DriftConfig {
