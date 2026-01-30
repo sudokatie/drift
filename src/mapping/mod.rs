@@ -4,6 +4,8 @@
 
 mod mapper;
 mod linear;
+mod quantize;
 
 pub use mapper::{Mapper, MappingPipeline};
 pub use linear::LinearMapper;
+pub use quantize::{QuantizeMapper, Scale};
