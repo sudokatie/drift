@@ -1,0 +1,38 @@
+[package]
+name = "drift"
+version = "0.1.0"
+edition = "2021"
+description = "Generative ambient music from data streams"
+license = "MIT"
+repository = "https://github.com/katieblackabee/drift"
+keywords = ["music", "generative", "ambient", "sonification"]
+categories = ["multimedia::audio"]
+
+[dependencies]
+# Audio
+cpal = "0.15"
+hound = "3.5"
+
+# Async
+tokio = { version = "1", features = ["full"] }
+
+# HTTP/API
+reqwest = { version = "0.12", features = ["json"] }
+
+# Parsing
+serde = { version = "1", features = ["derive"] }
+serde_yaml = "0.9"
+serde_json = "1"
+
+# CLI
+clap = { version = "4", features = ["derive"] }
+
+# System info
+sysinfo = "0.32"
+
+# Error handling
+anyhow = "1"
+thiserror = "2"
+
+[dev-dependencies]
+tempfile = "3"
