@@ -51,7 +51,7 @@ impl Scale {
     /// Get scale by name
     pub fn from_name(name: &str) -> Option<Self> {
         match name.to_lowercase().as_str() {
-            "minor_pentatonic" | "minorpentatonic" => Some(Self::minor_pentatonic()),
+            "pentatonic" | "minor_pentatonic" | "minorpentatonic" => Some(Self::minor_pentatonic()),
             "major_pentatonic" | "majorpentatonic" => Some(Self::major_pentatonic()),
             "minor" | "natural_minor" => Some(Self::minor()),
             "major" => Some(Self::major()),

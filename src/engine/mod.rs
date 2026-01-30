@@ -2,6 +2,10 @@
 //!
 //! Manages audio output and voice mixing.
 
+mod mixer;
+
+pub use mixer::{Mixer, MixerLayer};
+
 use crate::config::DriftConfig;
 use crate::synth::{DroneVoice, Voice};
 use anyhow::Result;
