@@ -15,7 +15,7 @@ Drift transforms data into ambient soundscapes. Weather becomes drones, git comm
 
 ```bash
 # From source
-git clone https://github.com/katieblackabee/drift
+git clone https://github.com/sudokatie/drift
 cd drift
 cargo build --release
 ```

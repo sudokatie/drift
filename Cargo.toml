@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 description = "Generative ambient music from data streams"
 license = "MIT"
-repository = "https://github.com/katieblackabee/drift"
+repository = "https://github.com/sudokatie/drift"
 keywords = ["music", "generative", "ambient", "sonification"]
 categories = ["multimedia::audio"]
 
