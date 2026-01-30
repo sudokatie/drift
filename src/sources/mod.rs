@@ -5,6 +5,8 @@
 
 mod source;
 mod system;
+mod weather;
 
 pub use source::{DataPoint, Source};
 pub use system::SystemSource;
+pub use weather::{WeatherConfig, WeatherSource};
