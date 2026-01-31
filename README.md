@@ -26,18 +26,17 @@ cargo build --release
 # Create example config
 drift init
 
-# Play (requires data source API keys)
-drift play --config drift.yaml
-
-# Record 1 minute to file
+# Record 1 minute to file (main feature in v0.1.0)
 drift record --config drift.yaml --output ambient.wav --duration 60
 
-# List audio devices
-drift devices
+# Preview audio generation (real-time playback coming in v0.2.0)
+drift play --config drift.yaml
 
 # Validate configuration
 drift check --config drift.yaml
 ```
+
+> **Note:** v0.1.0 focuses on WAV file recording. Real-time audio playback is planned for v0.2.0.
 
 ## Configuration
 
@@ -92,9 +91,7 @@ layers:
 ## Mapping Types
 
 - **linear**: Linear interpolation between input and output ranges
-- **quantize**: Snap to nearest musical scale degree (pentatonic, major, minor, etc.)
-- **logarithmic**: Logarithmic scaling (for frequency/volume)
-- **threshold**: Trigger on/off based on threshold
+- **quantize**: Snap to nearest musical scale degree (pentatonic, major, minor, dorian, whole tone)
 
 ## Data Sources
 

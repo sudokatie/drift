@@ -29,6 +29,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - LinearMapper: Linear interpolation with configurable ranges
 - QuantizeMapper: Snap frequencies to musical scales (pentatonic, major, minor, etc.)
 
+## [0.1.1] - 2026-01-31
+
+### Added
+- Environment variable substitution in config files (`${VAR_NAME}` syntax)
+- 4 new tests for env var substitution
+
+### Fixed
+- README no longer claims logarithmic/threshold mappers exist (they don't yet)
+- CLI help text clarifies which commands are fully implemented
+- Play command now suggests using record command for audio generation
+
+### Documentation
+- Added note that v0.1.0 focuses on WAV recording, real-time playback in v0.2.0
+
 ## [Unreleased]
 
 ### Planned
@@ -37,4 +51,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Real-time audio output via cpal
 - TUI mode for live visualization
 - Additional voice types (percussion, melody, texture)
+- Logarithmic and threshold mappers
 - MIDI output support

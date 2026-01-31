@@ -26,8 +26,7 @@ fn main() -> anyhow::Result<()> {
             // Set initial pitch
             engine.set_voice_parameter(drone_idx, "pitch", 220.0);
             
-            println!("\nGenerating audio...");
-            println!("(This is a stub - full audio output not yet implemented)");
+            println!("\nAudio preview (real-time playback coming in v0.2.0):");
             
             // Generate a few samples to show it works
             for i in 0..5 {
@@ -35,8 +34,8 @@ fn main() -> anyhow::Result<()> {
                 println!("  Sample {}: {:.6}", i, sample);
             }
             
-            println!("\nDrift would be playing ambient music here.");
-            println!("Press Ctrl+C to stop (when fully implemented).");
+            println!("\nTo generate audio now, use the record command:");
+            println!("  drift record --config {:?} --output ambient.wav --duration 60", config_path);
         }
         
         Commands::Record { config: config_path, output, duration } => {

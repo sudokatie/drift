@@ -14,7 +14,7 @@ pub struct Cli {
 
 #[derive(Subcommand)]
 pub enum Commands {
-    /// Play generative ambient music
+    /// Play generative ambient music (preview only - real-time audio coming soon)
     Play {
         /// Configuration file path
         #[arg(short, long, default_value = "drift.yaml")]
@@ -36,10 +36,10 @@ pub enum Commands {
         duration: u64,
     },
     
-    /// List available audio devices
+    /// List available audio devices (coming soon)
     Devices,
     
-    /// Monitor data sources
+    /// Monitor data sources (coming soon)
     Monitor {
         /// Configuration file path
         #[arg(short, long, default_value = "drift.yaml")]
