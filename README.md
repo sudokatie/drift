@@ -6,10 +6,15 @@ Drift transforms data into ambient soundscapes. Weather becomes drones, git comm
 
 ## Features
 
-- **Data Sources**: Weather API, system metrics, git repositories (more coming)
-- **Mapping System**: Linear, quantize (to musical scales)
-- **Synthesis**: Drone voices with detuned oscillators, filters, envelopes
-- **Output**: Real-time audio or WAV file recording
+- **Data Sources**: Weather API, system metrics (git and price coming soon)
+- **Mapping System**: Linear, logarithmic, threshold, quantize (to musical scales)
+- **Synthesis**: Drone voices with:
+  - Multiple detuned oscillators (saw, square, sine, triangle, noise)
+  - ADSR amplitude envelope
+  - Biquad low-pass filter with resonance
+  - LFO modulation for filter and pitch (vibrato)
+  - Sub oscillator and noise layer
+- **Output**: WAV file recording (real-time playback coming in v0.2.0)
 
 ## Installation
 
@@ -91,6 +96,8 @@ layers:
 ## Mapping Types
 
 - **linear**: Linear interpolation between input and output ranges
+- **logarithmic**: Logarithmic scaling (perceptually linear for frequency/volume)
+- **threshold**: Binary trigger when value crosses threshold (for percussion)
 - **quantize**: Snap to nearest musical scale degree (pentatonic, major, minor, dorian, whole tone)
 
 ## Data Sources

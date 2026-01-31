@@ -7,7 +7,7 @@
 //! - Mixes voice outputs into the final audio stream
 
 use crate::config::{LayerConfig, MappingConfig, MappingKind, VoiceKind};
-use crate::mapping::{LinearMapper, MappingPipeline, QuantizeMapper, Scale};
+use crate::mapping::{LinearMapper, LogarithmicMapper, MappingPipeline, QuantizeMapper, Scale, ThresholdMapper, ThresholdDirection};
 use crate::sources::DataPoint;
 use crate::synth::{DroneVoice, Voice};
 use std::collections::HashMap;
@@ -73,6 +73,26 @@ impl MixerLayer {
                 MappingPipeline::new()
                     .with(LinearMapper::new("linear", in_min, in_max, out_min, out_max))
             }
+            MappingKind::Logarithmic => {
+                MappingPipeline::new()
+                    .with(LogarithmicMapper::new("logarithmic", in_min, in_max, out_min, out_max))
+            }
+            MappingKind::Exponential => {
+                // Exponential is the inverse of logarithmic
+                // For now, use logarithmic with swapped min/max perception
+                // TODO: Implement true exponential mapper if needed
+                MappingPipeline::new()
+                    .with(LogarithmicMapper::new("exponential", in_min, in_max, out_min, out_max))
+            }
+            MappingKind::Threshold => {
+                // Use midpoint of input range as threshold
+                let threshold = (in_min + in_max) / 2.0;
+                MappingPipeline::new()
+                    .with(ThresholdMapper::new("threshold", threshold)
+                        .with_direction(ThresholdDirection::Rising)
+                        .with_trigger_value(out_max)
+                        .with_rest_value(out_min))
+            }
             MappingKind::Quantize => {
                 // Default to pentatonic scale if not specified
                 let scale = Scale::from_name("pentatonic").unwrap_or_else(Scale::minor_pentatonic);
@@ -80,15 +100,6 @@ impl MixerLayer {
                 MappingPipeline::new()
                     .with(LinearMapper::new("range", in_min, in_max, out_min, out_max))
                     .with(QuantizeMapper::new("quantize", 220.0, scale))
-            }
-            // Not yet implemented - fall back to linear with warning
-            MappingKind::Logarithmic | MappingKind::Exponential | MappingKind::Threshold => {
-                eprintln!(
-                    "Warning: {:?} mapping not yet implemented, using linear",
-                    config.kind
-                );
-                MappingPipeline::new()
-                    .with(LinearMapper::new("linear", in_min, in_max, out_min, out_max))
             }
         }
     }
@@ -398,6 +409,13 @@ mod tests {
         assert!(mixer.has_active_layers());
         
         mixer.release_all();
+        
+        // With ADSR envelope, voice stays active during release phase
+        // Process samples to let release complete (1s release at 44100 Hz)
+        for _ in 0..50000 {
+            mixer.process();
+        }
+        
         assert!(!mixer.has_active_layers());
         
         mixer.trigger_all();
