@@ -1,0 +1,70 @@
+# Dual Source - Weather and system data combined
+#
+# Two layers: weather drone and system drone mixed together.
+
+audio:
+  sample_rate: 44100
+  buffer_size: 512
+
+master:
+  bpm: 60
+  key: D
+  scale: dorian
+  volume: 0.6
+
+sources:
+  - name: weather
+    kind: weather
+    enabled: true
+    settings:
+      api_key: ${OPENWEATHER_API_KEY}
+      location: "London,UK"
+      interval_secs: 300
+      metric: true
+
+  - name: system
+    kind: system
+    enabled: true
+    settings:
+      interval_ms: 2000
+
+layers:
+  - name: weather_drone
+    voice: drone
+    source: weather
+    volume: 0.5
+    mappings:
+      pitch:
+        field: temperature
+        kind: linear
+        in_min: -10
+        in_max: 30
+        out_min: 110
+        out_max: 220
+      filter:
+        field: clouds
+        kind: linear
+        in_min: 0
+        in_max: 100
+        out_min: 400
+        out_max: 1200
+
+  - name: system_drone
+    voice: drone
+    source: system
+    volume: 0.4
+    mappings:
+      pitch:
+        field: cpu_percent
+        kind: linear
+        in_min: 0
+        in_max: 100
+        out_min: 220
+        out_max: 440
+      filter:
+        field: memory_percent
+        kind: linear
+        in_min: 0
+        in_max: 100
+        out_min: 500
+        out_max: 2500

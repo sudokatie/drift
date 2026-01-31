@@ -1,0 +1,41 @@
+# System Ambient - Drone from CPU and memory usage
+#
+# CPU controls pitch, memory controls filter. No API key needed.
+
+audio:
+  sample_rate: 44100
+  buffer_size: 512
+
+master:
+  bpm: 60
+  key: A
+  scale: minor_pentatonic
+  volume: 0.7
+
+sources:
+  - name: system
+    kind: system
+    enabled: true
+    settings:
+      interval_ms: 1000
+
+layers:
+  - name: system_drone
+    voice: drone
+    source: system
+    volume: 0.8
+    mappings:
+      pitch:
+        field: cpu_percent
+        kind: linear
+        in_min: 0
+        in_max: 100
+        out_min: 80
+        out_max: 320
+      filter:
+        field: memory_percent
+        kind: linear
+        in_min: 0
+        in_max: 100
+        out_min: 300
+        out_max: 3000

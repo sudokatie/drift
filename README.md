@@ -41,7 +41,11 @@ drift check --config drift.yaml
 
 ## Configuration
 
-Drift uses YAML configuration files. See `examples/` for sample configs.
+Drift uses YAML configuration files. See `examples/` for sample configs:
+
+- `weather_ambient.yaml` - Weather-driven drone (requires API key)
+- `system_ambient.yaml` - CPU/memory-driven drone (no API key needed)
+- `dual_source.yaml` - Weather + system combined
 
 ```yaml
 audio:

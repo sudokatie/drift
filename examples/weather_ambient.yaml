@@ -1,0 +1,45 @@
+# Weather Ambient - Drone from weather data
+#
+# Temperature controls pitch, humidity controls filter brightness.
+# Requires OPENWEATHER_API_KEY environment variable.
+
+audio:
+  sample_rate: 44100
+  buffer_size: 512
+
+master:
+  bpm: 60
+  key: C
+  scale: minor_pentatonic
+  volume: 0.7
+
+sources:
+  - name: weather
+    kind: weather
+    enabled: true
+    settings:
+      api_key: ${OPENWEATHER_API_KEY}
+      location: "Austin,TX,US"
+      interval_secs: 300
+      metric: true
+
+layers:
+  - name: weather_drone
+    voice: drone
+    source: weather
+    volume: 0.8
+    mappings:
+      pitch:
+        field: temperature
+        kind: linear
+        in_min: -20
+        in_max: 40
+        out_min: 100
+        out_max: 400
+      filter:
+        field: humidity
+        kind: linear
+        in_min: 0
+        in_max: 100
+        out_min: 200
+        out_max: 2000
