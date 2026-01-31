@@ -7,7 +7,7 @@ Drift transforms data into ambient soundscapes. Weather becomes drones, git comm
 ## Features
 
 - **Data Sources**: Weather API, system metrics, git repositories (more coming)
-- **Mapping System**: Linear, logarithmic, quantize (to musical scales)
+- **Mapping System**: Linear, quantize (to musical scales)
 - **Synthesis**: Drone voices with detuned oscillators, filters, envelopes
 - **Output**: Real-time audio or WAV file recording
 

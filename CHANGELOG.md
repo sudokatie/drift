@@ -29,6 +29,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - LinearMapper: Linear interpolation with configurable ranges
 - QuantizeMapper: Snap frequencies to musical scales (pentatonic, major, minor, etc.)
 
+## [0.1.2] - 2026-01-31
+
+### Fixed
+- README Features section no longer claims logarithmic mapper exists
+- Unimplemented mapping types (logarithmic, exponential, threshold) now print warning and fall back to linear
+- Unimplemented voice types (percussion, melody, texture) now print warning and fall back to drone
+
 ## [0.1.1] - 2026-01-31
 
 ### Added

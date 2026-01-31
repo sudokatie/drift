@@ -32,8 +32,14 @@ impl MixerLayer {
         // Create appropriate voice based on config
         let voice: Box<dyn Voice> = match config.voice {
             VoiceKind::Drone => Box::new(DroneVoice::new(sample_rate)),
-            // TODO: Add other voice types as they're implemented
-            _ => Box::new(DroneVoice::new(sample_rate)), // Default to drone
+            // Not yet implemented - fall back to drone with warning
+            VoiceKind::Percussion | VoiceKind::Melody | VoiceKind::Texture => {
+                eprintln!(
+                    "Warning: {:?} voice not yet implemented, using drone",
+                    config.voice
+                );
+                Box::new(DroneVoice::new(sample_rate))
+            }
         };
         
         // Build mappings
@@ -75,8 +81,12 @@ impl MixerLayer {
                     .with(LinearMapper::new("range", in_min, in_max, out_min, out_max))
                     .with(QuantizeMapper::new("quantize", 220.0, scale))
             }
-            // TODO: Add logarithmic, exponential, threshold mappers
-            _ => {
+            // Not yet implemented - fall back to linear with warning
+            MappingKind::Logarithmic | MappingKind::Exponential | MappingKind::Threshold => {
+                eprintln!(
+                    "Warning: {:?} mapping not yet implemented, using linear",
+                    config.kind
+                );
                 MappingPipeline::new()
                     .with(LinearMapper::new("linear", in_min, in_max, out_min, out_max))
             }
