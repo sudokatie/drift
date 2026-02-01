@@ -8,12 +8,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Planned
-- Git source for repository events
-- Price source for market data
 - Real-time audio output via cpal
 - TUI mode for live visualization
 - Additional voice types (percussion, melody, texture)
 - MIDI output support
+
+## [0.1.3] - 2026-02-01
+
+### Added
+- **Git source**: Watch repositories for commits, branch changes, file modifications
+  - Tracks commit_count, modified_count, staged_count, activity
+  - Events: commit, branch_change, staged, file_change
+- **Price source**: Cryptocurrency prices from CoinGecko API
+  - Tracks price, volume, change_24h, volatility
+  - Events: pump (>5% up), dump (>5% down)
+- **Pattern mapper**: Euclidean rhythm generator for converting data to rhythmic triggers
+  - Implements Bjorklund's algorithm
+  - Supports common world music rhythms (E(3,8), E(5,8), etc.)
+- **Recorder module**: Extracted WAV recording into reusable engine component
+- **drift.example.yaml**: Root-level example config file
+- **Full device enumeration**: `drift devices` now lists all audio input/output devices
+- **Full monitor command**: `drift monitor` now fetches and displays real data from sources
+
+### Changed
+- README now accurately reflects all implemented features
+- CLI uses proper Recorder module instead of inline hound calls
+- init command now uses drift.example.yaml as template
+
+### Tests
+- 141 unit tests (up from 96)
+- 1 doc test
+- All tests passing
+- Clippy clean
 
 ## [0.1.2] - 2026-01-31
 

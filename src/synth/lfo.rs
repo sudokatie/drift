@@ -140,7 +140,7 @@ mod tests {
         
         for _ in 0..44100 {
             let sample = lfo.process();
-            assert!(sample >= -1.0 && sample <= 1.0);
+            assert!((-1.0..=1.0).contains(&sample));
         }
     }
 
@@ -161,7 +161,7 @@ mod tests {
         
         for _ in 0..1000 {
             let sample = lfo.process_unipolar();
-            assert!(sample >= 0.0 && sample <= 1.0);
+            assert!((0.0..=1.0).contains(&sample));
         }
     }
 

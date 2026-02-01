@@ -3,12 +3,43 @@
 //! Collects CPU, memory, and other system metrics.
 
 use super::{DataPoint, Source};
+use anyhow::Result;
+use std::collections::HashMap;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::time::Duration;
 use sysinfo::System;
 use tokio::sync::broadcast;
 use tokio::task::JoinHandle;
+
+/// Configuration for system source
+#[derive(Debug, Clone)]
+pub struct SystemConfig {
+    /// Poll interval
+    pub interval: Duration,
+}
+
+impl SystemConfig {
+    /// Create config from settings map
+    pub fn from_settings(settings: &HashMap<String, serde_yaml::Value>) -> Result<Self> {
+        let interval_ms = settings
+            .get("interval_ms")
+            .and_then(|v| v.as_u64())
+            .unwrap_or(1000); // 1 second default
+
+        Ok(Self {
+            interval: Duration::from_millis(interval_ms),
+        })
+    }
+}
+
+impl Default for SystemConfig {
+    fn default() -> Self {
+        Self {
+            interval: Duration::from_secs(1),
+        }
+    }
+}
 
 /// Source that collects system metrics
 pub struct SystemSource {
@@ -20,8 +51,13 @@ pub struct SystemSource {
 }
 
 impl SystemSource {
-    /// Create a new system source
-    pub fn new(name: impl Into<String>, interval: Duration) -> Self {
+    /// Create a new system source with default interval (1 second)
+    pub fn new(name: impl Into<String>) -> Self {
+        Self::with_interval(name, Duration::from_secs(1))
+    }
+
+    /// Create a new system source with custom interval
+    pub fn with_interval(name: impl Into<String>, interval: Duration) -> Self {
         let (sender, _) = broadcast::channel(16);
         Self {
             name: name.into(),
@@ -30,6 +66,11 @@ impl SystemSource {
             sender,
             task: None,
         }
+    }
+
+    /// Create a new system source with config
+    pub fn with_config(name: impl Into<String>, config: SystemConfig) -> Self {
+        Self::with_interval(name, config.interval)
     }
 }
 
@@ -112,42 +153,66 @@ impl Drop for SystemSource {
 mod tests {
     use super::*;
 
+    #[test]
+    fn test_system_config_from_settings() {
+        let mut settings = HashMap::new();
+        settings.insert(
+            "interval_ms".to_string(),
+            serde_yaml::Value::Number(500.into()),
+        );
+
+        let config = SystemConfig::from_settings(&settings).unwrap();
+        assert_eq!(config.interval, Duration::from_millis(500));
+    }
+
+    #[test]
+    fn test_system_config_defaults() {
+        let settings = HashMap::new();
+        let config = SystemConfig::from_settings(&settings).unwrap();
+        assert_eq!(config.interval, Duration::from_millis(1000));
+    }
+
     #[tokio::test]
     async fn test_system_source_creation() {
-        let source = SystemSource::new("test_system", Duration::from_secs(1));
+        let source = SystemSource::new("test_system");
+        assert_eq!(source.name(), "test_system");
+        assert!(!source.is_running());
+    }
+
+    #[tokio::test]
+    async fn test_system_source_with_interval() {
+        let source = SystemSource::with_interval("test_system", Duration::from_millis(500));
         assert_eq!(source.name(), "test_system");
         assert!(!source.is_running());
     }
 
     #[tokio::test]
     async fn test_system_source_start_stop() {
-        let mut source = SystemSource::new("test_system", Duration::from_millis(100));
-        
+        let mut source = SystemSource::with_interval("test_system", Duration::from_millis(100));
+
         source.start().unwrap();
         assert!(source.is_running());
-        
+
         // Let it run briefly
         tokio::time::sleep(Duration::from_millis(50)).await;
-        
+
         source.stop();
         assert!(!source.is_running());
     }
 
     #[tokio::test]
     async fn test_system_source_data() {
-        let mut source = SystemSource::new("test_system", Duration::from_millis(100));
+        let mut source = SystemSource::with_interval("test_system", Duration::from_millis(100));
         let mut receiver = source.subscribe();
-        
+
         source.start().unwrap();
-        
+
         // Wait for a data point
-        let result = tokio::time::timeout(
-            Duration::from_secs(2),
-            receiver.recv()
-        ).await;
-        
+        let result =
+            tokio::time::timeout(Duration::from_secs(2), receiver.recv()).await;
+
         source.stop();
-        
+
         let point = result.expect("timeout").expect("receive error");
         assert_eq!(point.source, "test_system");
         assert!(point.values.contains_key("cpu_percent"));

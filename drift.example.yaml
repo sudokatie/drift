@@ -1,0 +1,99 @@
+# Drift Example Configuration
+#
+# Copy this file to drift.yaml and customize for your setup.
+# Environment variables can be used with ${VAR_NAME} syntax.
+
+audio:
+  sample_rate: 44100
+  buffer_size: 512
+
+master:
+  bpm: 60
+  key: C
+  scale: minor_pentatonic
+  volume: 0.7
+
+sources:
+  # Weather data from OpenWeatherMap
+  # Get a free API key at: https://openweathermap.org/api
+  - name: weather
+    kind: weather
+    enabled: true
+    settings:
+      api_key: ${OPENWEATHER_API_KEY}
+      location: "Austin,TX,US"
+      interval_secs: 300
+      metric: true
+
+  # Local system metrics (no API key needed)
+  - name: system
+    kind: system
+    enabled: true
+    settings:
+      interval_ms: 1000
+
+  # Git repository activity
+  - name: git
+    kind: git
+    enabled: false
+    settings:
+      path: /path/to/your/repo
+      watch: true
+
+  # Price data from CoinGecko
+  - name: price
+    kind: price
+    enabled: false
+    settings:
+      symbols:
+        - bitcoin
+        - ethereum
+      interval_secs: 60
+
+layers:
+  - name: weather_drone
+    voice: drone
+    source: weather
+    volume: 0.8
+    mappings:
+      pitch:
+        field: temperature
+        kind: linear
+        in_min: -20
+        in_max: 40
+        out_min: 100
+        out_max: 400
+      filter:
+        field: humidity
+        kind: linear
+        in_min: 0
+        in_max: 100
+        out_min: 200
+        out_max: 2000
+      noise_mix:
+        field: wind_speed
+        kind: linear
+        in_min: 0
+        in_max: 20
+        out_min: 0
+        out_max: 0.3
+
+  - name: system_texture
+    voice: drone
+    source: system
+    volume: 0.5
+    mappings:
+      pitch:
+        field: cpu_percent
+        kind: logarithmic
+        in_min: 0
+        in_max: 100
+        out_min: 80
+        out_max: 200
+      filter:
+        field: memory_percent
+        kind: linear
+        in_min: 0
+        in_max: 100
+        out_min: 300
+        out_max: 1500

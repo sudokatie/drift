@@ -215,7 +215,7 @@ mod tests {
         let mut sum = 0.0;
         for _ in 0..1000 {
             let sample = osc.generate();
-            assert!(sample >= -1.0 && sample <= 1.0, "Sample out of range: {}", sample);
+            assert!((-1.0..=1.0).contains(&sample), "Sample out of range: {}", sample);
             sum += sample;
         }
         
@@ -231,7 +231,7 @@ mod tests {
         // Generate samples and check they're roughly in range
         for _ in 0..1000 {
             let sample = osc.generate();
-            assert!(sample >= -2.0 && sample <= 2.0, "Sample out of range: {}", sample);
+            assert!((-2.0..=2.0).contains(&sample), "Sample out of range: {}", sample);
         }
     }
 
@@ -242,7 +242,7 @@ mod tests {
         // Generate samples and check they're in range
         for _ in 0..1000 {
             let sample = osc.generate();
-            assert!(sample >= -1.0 && sample <= 1.0, "Sample out of range: {}", sample);
+            assert!((-1.0..=1.0).contains(&sample), "Sample out of range: {}", sample);
         }
     }
 }

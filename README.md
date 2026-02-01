@@ -6,15 +6,17 @@ Drift transforms data into ambient soundscapes. Weather becomes drones, git comm
 
 ## Features
 
-- **Data Sources**: Weather API, system metrics (git and price coming soon)
-- **Mapping System**: Linear, logarithmic, threshold, quantize (to musical scales)
+- **Data Sources**: Weather API, system metrics, git repository, cryptocurrency prices
+- **Mapping System**: Linear, logarithmic, threshold, quantize (to musical scales), pattern (Euclidean rhythms)
 - **Synthesis**: Drone voices with:
-  - Multiple detuned oscillators (saw, square, sine, triangle, noise)
+  - Multiple detuned oscillators (saw, square, sine, triangle)
+  - Noise generators (white, pink, brown)
   - ADSR amplitude envelope
-  - Biquad low-pass filter with resonance
+  - Biquad filter (low-pass, high-pass, band-pass) with resonance
   - LFO modulation for filter and pitch (vibrato)
   - Sub oscillator and noise layer
-- **Output**: WAV file recording (real-time playback coming in v0.2.0)
+- **Output**: WAV file recording, real-time audio device enumeration
+- **CLI**: Full command suite (play, record, devices, monitor, check, init)
 
 ## Installation
 
@@ -31,17 +33,21 @@ cargo build --release
 # Create example config
 drift init
 
-# Record 1 minute to file (main feature in v0.1.0)
+# Record 1 minute to file
 drift record --config drift.yaml --output ambient.wav --duration 60
 
-# Preview audio generation (real-time playback coming in v0.2.0)
+# Preview audio generation
 drift play --config drift.yaml
+
+# List audio devices
+drift devices
+
+# Monitor data sources in real-time
+drift monitor --config drift.yaml
 
 # Validate configuration
 drift check --config drift.yaml
 ```
-
-> **Note:** v0.1.0 focuses on WAV file recording. Real-time audio playback is planned for v0.2.0.
 
 ## Configuration
 
@@ -71,6 +77,22 @@ sources:
       location: "Austin,TX,US"
       interval_secs: 300
 
+  - name: git
+    kind: git
+    enabled: true
+    settings:
+      path: /path/to/repo
+      interval_ms: 5000
+
+  - name: price
+    kind: price
+    enabled: true
+    settings:
+      symbols:
+        - bitcoin
+        - ethereum
+      interval_secs: 60
+
 layers:
   - name: weather_drone
     voice: drone
@@ -93,34 +115,40 @@ layers:
         out_max: 2000
 ```
 
+## Data Sources
+
+### Weather (OpenWeatherMap)
+- temperature, humidity, pressure, wind_speed, wind_direction, clouds
+- Requires API key (free tier: 60 calls/min)
+
+### System Metrics
+- cpu_percent, memory_percent, memory_used_bytes, memory_total_bytes
+- No API key required
+
+### Git Repository
+- commit_count, modified_count, staged_count, activity
+- Events: commit, branch_change, staged, file_change
+- No API key required (local repo)
+
+### Price (CoinGecko)
+- price, volume, change_24h, volatility
+- Events: pump (>5% up), dump (>5% down)
+- No API key required (free tier)
+
 ## Mapping Types
 
 - **linear**: Linear interpolation between input and output ranges
 - **logarithmic**: Logarithmic scaling (perceptually linear for frequency/volume)
 - **threshold**: Binary trigger when value crosses threshold (for percussion)
 - **quantize**: Snap to nearest musical scale degree (pentatonic, major, minor, dorian, whole tone)
-
-## Data Sources
-
-### Weather (OpenWeatherMap)
-- temperature, humidity, pressure, wind_speed, clouds
-- Requires API key (free tier: 60 calls/min)
-
-### System Metrics
-- cpu_percent, memory_percent
-- No API key required
-
-### Git (coming soon)
-- commit events, file changes
-
-### Price (coming soon)
-- Cryptocurrency/stock price feeds
+- **pattern**: Euclidean rhythm generator (converts data density to rhythmic patterns)
 
 ## Building
 
 ```bash
 cargo build --release
 cargo test
+cargo clippy
 ```
 
 ## License

@@ -2,14 +2,16 @@
 //!
 //! Maps data values to audio parameters using various scaling functions.
 
-mod mapper;
 mod linear;
 mod logarithmic;
+mod mapper;
+mod pattern;
 mod quantize;
 mod threshold;
 
-pub use mapper::{Mapper, MappingPipeline};
 pub use linear::LinearMapper;
 pub use logarithmic::LogarithmicMapper;
+pub use mapper::{Mapper, MappingPipeline};
+pub use pattern::{EuclideanPattern, PatternMapper};
 pub use quantize::{QuantizeMapper, Scale};
-pub use threshold::{ThresholdMapper, ThresholdDirection, EdgeThresholdMapper};
+pub use threshold::{EdgeThresholdMapper, ThresholdDirection, ThresholdMapper};
