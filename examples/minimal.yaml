@@ -1,0 +1,17 @@
+# Minimal - Bare minimum config for a static drone
+#
+# No data sources, just a drone at fixed pitch. The simplest possible config.
+
+audio:
+  sample_rate: 44100
+  buffer_size: 512
+
+master:
+  bpm: 60
+  key: C
+  scale: minor_pentatonic
+  volume: 0.7
+
+sources: []
+
+layers: []
