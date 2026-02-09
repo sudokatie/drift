@@ -7,7 +7,7 @@
 //! - Mixes voice outputs into the final audio stream
 
 use crate::config::{LayerConfig, MappingConfig, MappingKind, VoiceKind};
-use crate::mapping::{LinearMapper, LogarithmicMapper, MappingPipeline, QuantizeMapper, Scale, ThresholdMapper, ThresholdDirection};
+use crate::mapping::{ExponentialMapper, LinearMapper, LogarithmicMapper, MappingPipeline, QuantizeMapper, Scale, ThresholdMapper, ThresholdDirection};
 use crate::sources::DataPoint;
 use crate::synth::{DroneVoice, Voice};
 use std::collections::HashMap;
@@ -78,11 +78,11 @@ impl MixerLayer {
                     .with(LogarithmicMapper::new("logarithmic", in_min, in_max, out_min, out_max))
             }
             MappingKind::Exponential => {
-                // Exponential is the inverse of logarithmic
-                // For now, use logarithmic with swapped min/max perception
-                // TODO: Implement true exponential mapper if needed
+                // True exponential mapper (inverse of logarithmic)
+                // Creates a curve where small input changes at low values
+                // produce large output changes (slow start, fast finish)
                 MappingPipeline::new()
-                    .with(LogarithmicMapper::new("exponential", in_min, in_max, out_min, out_max))
+                    .with(ExponentialMapper::new("exponential", in_min, in_max, out_min, out_max))
             }
             MappingKind::Threshold => {
                 // Use midpoint of input range as threshold
