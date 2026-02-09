@@ -144,6 +144,18 @@ layers:
 - **quantize**: Snap to nearest musical scale degree (pentatonic, major, minor, dorian, whole tone)
 - **pattern**: Euclidean rhythm generator (converts data density to rhythmic patterns)
 
+## Roadmap
+
+### v0.2 (Planned)
+- [ ] MIDI output for external synth control
+- [ ] Real-time audio playback (live mode)
+
+### v0.3 (Planned)
+- [ ] Visual companion (waveform display)
+- [ ] True exponential mapper implementation
+
+See FEATURE-BACKLOG.md in the clawd repo for detailed acceptance criteria.
+
 ## Building
 
 ```bash
