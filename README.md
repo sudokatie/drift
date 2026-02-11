@@ -15,8 +15,8 @@ Drift transforms data into ambient soundscapes. Weather becomes drones, git comm
   - Biquad filter (low-pass, high-pass, band-pass) with resonance
   - LFO modulation for filter and pitch (vibrato)
   - Sub oscillator and noise layer
-- **Output**: Real-time audio playback, WAV file recording, audio device enumeration
-- **CLI**: Full command suite (play, record, devices, monitor, check, init)
+- **Output**: Real-time audio playback, WAV file recording, MIDI output
+- **CLI**: Full command suite (play, record, devices, midi-ports, monitor, check, init)
 
 ## Installation
 
@@ -41,6 +41,13 @@ drift record --config drift.yaml --output ambient.wav --duration 60
 
 # List audio devices
 drift devices
+
+# List MIDI output ports
+drift midi-ports
+
+# Play with MIDI output instead of audio
+drift play --config drift.yaml --midi
+drift play --config drift.yaml --midi --midi-port "IAC" --midi-channel 1
 
 # Monitor data sources in real-time
 drift monitor --config drift.yaml
