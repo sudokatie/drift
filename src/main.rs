@@ -4,7 +4,7 @@ use anyhow::Result;
 use clap::Parser;
 use cpal::traits::{DeviceTrait, HostTrait};
 use drift::config::{self, SourceKind};
-use drift::engine::{Engine, Player, Recorder};
+use drift::engine::{list_midi_ports, Engine, MidiConfig, MidiPlayer, Player, Recorder};
 use drift::sources::{GitConfig, GitSource, PriceConfig, PriceSource, Source, SystemSource, WeatherConfig, WeatherSource};
 
 mod cli;
@@ -15,9 +15,14 @@ fn main() -> Result<()> {
     let cli = Cli::parse();
 
     match cli.command {
-        Commands::Play { config: config_path } => {
+        Commands::Play {
+            config: config_path,
+            midi,
+            midi_port,
+            midi_channel,
+        } => {
             use std::sync::{Arc, Mutex};
-            
+
             println!("Loading configuration from {:?}...", config_path);
             let cfg = config::load_config(&config_path)?;
 
@@ -31,47 +36,103 @@ fn main() -> Result<()> {
             // Set initial pitch
             engine.set_voice_parameter(drone_idx, "pitch", 220.0);
 
-            // Wrap engine in Arc<Mutex> for sharing with audio thread
-            let engine = Arc::new(Mutex::new(engine));
+            if midi {
+                // MIDI output mode
+                println!("  Mode: MIDI output");
+                println!("  Channel: {}", midi_channel);
 
-            // Start real-time playback
-            let mut player = Player::new();
-            match player.start(engine.clone()) {
-                Ok(()) => {
-                    println!("\nPlaying ambient audio... Press Ctrl+C to stop.\n");
-                    
-                    // Wait for Ctrl+C
-                    let running = Arc::new(std::sync::atomic::AtomicBool::new(true));
-                    let r = running.clone();
-                    
-                    ctrlc::set_handler(move || {
-                        r.store(false, std::sync::atomic::Ordering::SeqCst);
-                    })?;
-                    
-                    while running.load(std::sync::atomic::Ordering::SeqCst) {
-                        std::thread::sleep(std::time::Duration::from_millis(100));
+                let midi_config = MidiConfig {
+                    channel: midi_channel,
+                    ..Default::default()
+                };
+
+                match MidiPlayer::new(midi_port.as_deref(), midi_config) {
+                    Ok(midi_player) => {
+                        println!("\nSending MIDI... Press Ctrl+C to stop.\n");
+
+                        let running = Arc::new(std::sync::atomic::AtomicBool::new(true));
+                        let r = running.clone();
+
+                        ctrlc::set_handler(move || {
+                            r.store(false, std::sync::atomic::Ordering::SeqCst);
+                        })?;
+
+                        // Send MIDI based on engine state
+                        let mut last_value = 0.0;
+                        while running.load(std::sync::atomic::Ordering::SeqCst) {
+                            // Get a sample value as a control signal
+                            let sample = engine.process();
+                            let normalized = (sample + 1.0) / 2.0; // -1..1 to 0..1
+
+                            // Send CC for continuous control
+                            if let Err(e) = midi_player.send_cc(normalized) {
+                                eprintln!("MIDI error: {}", e);
+                                break;
+                            }
+
+                            // Occasionally trigger notes based on level changes
+                            if (normalized - last_value).abs() > 0.1 {
+                                let _ = midi_player.send_note_off(last_value);
+                                let _ = midi_player.send_note(normalized);
+                                last_value = normalized;
+                            }
+
+                            std::thread::sleep(std::time::Duration::from_millis(50));
+                        }
+
+                        midi_player.stop();
+                        println!("\nStopped.");
                     }
-                    
-                    player.stop();
-                    println!("\nStopped.");
-                }
-                Err(e) => {
-                    eprintln!("Failed to start audio playback: {}", e);
-                    eprintln!("\nFalling back to preview mode...");
-                    
-                    // Fallback: show sample preview
-                    if let Ok(mut eng) = engine.lock() {
-                        for i in 0..5 {
-                            let sample = eng.process();
-                            println!("  Sample {}: {:.6}", i, sample);
+                    Err(e) => {
+                        eprintln!("Failed to open MIDI port: {}", e);
+                        eprintln!("\nAvailable MIDI ports:");
+                        if let Ok(ports) = list_midi_ports() {
+                            for port in ports {
+                                eprintln!("  - {}", port);
+                            }
                         }
                     }
-                    
-                    println!("\nTo generate audio, use the record command:");
-                    println!(
-                        "  drift record --config {:?} --output ambient.wav --duration 60",
-                        config_path
-                    );
+                }
+            } else {
+                // Audio output mode
+                let engine = Arc::new(Mutex::new(engine));
+
+                let mut player = Player::new();
+                match player.start(engine.clone()) {
+                    Ok(()) => {
+                        println!("\nPlaying ambient audio... Press Ctrl+C to stop.\n");
+
+                        let running = Arc::new(std::sync::atomic::AtomicBool::new(true));
+                        let r = running.clone();
+
+                        ctrlc::set_handler(move || {
+                            r.store(false, std::sync::atomic::Ordering::SeqCst);
+                        })?;
+
+                        while running.load(std::sync::atomic::Ordering::SeqCst) {
+                            std::thread::sleep(std::time::Duration::from_millis(100));
+                        }
+
+                        player.stop();
+                        println!("\nStopped.");
+                    }
+                    Err(e) => {
+                        eprintln!("Failed to start audio playback: {}", e);
+                        eprintln!("\nFalling back to preview mode...");
+
+                        if let Ok(mut eng) = engine.lock() {
+                            for i in 0..5 {
+                                let sample = eng.process();
+                                println!("  Sample {}: {:.6}", i, sample);
+                            }
+                        }
+
+                        println!("\nTo generate audio, use the record command:");
+                        println!(
+                            "  drift record --config {:?} --output ambient.wav --duration 60",
+                            config_path
+                        );
+                    }
                 }
             }
         }
@@ -113,6 +174,25 @@ fn main() -> Result<()> {
 
             recorder.finalize()?;
             println!("\nRecorded to {:?}", output);
+        }
+
+        Commands::MidiPorts => {
+            println!("Available MIDI output ports:\n");
+
+            match list_midi_ports() {
+                Ok(ports) => {
+                    if ports.is_empty() {
+                        println!("  No MIDI output ports found.");
+                    } else {
+                        for (i, port) in ports.iter().enumerate() {
+                            println!("  {}. {}", i + 1, port);
+                        }
+                    }
+                }
+                Err(e) => {
+                    eprintln!("  Error listing MIDI ports: {}", e);
+                }
+            }
         }
 
         Commands::Devices => {

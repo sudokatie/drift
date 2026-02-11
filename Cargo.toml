@@ -41,5 +41,8 @@ thiserror = "2"
 # Signal handling
 ctrlc = "3.4"
 
+# MIDI
+midir = "0.10"
+
 [dev-dependencies]
 tempfile = "3"
