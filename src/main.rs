@@ -4,7 +4,7 @@ use anyhow::Result;
 use clap::Parser;
 use cpal::traits::{DeviceTrait, HostTrait};
 use drift::config::{self, SourceKind};
-use drift::engine::{Engine, Recorder};
+use drift::engine::{Engine, Player, Recorder};
 use drift::sources::{GitConfig, GitSource, PriceConfig, PriceSource, Source, SystemSource, WeatherConfig, WeatherSource};
 
 mod cli;
@@ -16,6 +16,8 @@ fn main() -> Result<()> {
 
     match cli.command {
         Commands::Play { config: config_path } => {
+            use std::sync::{Arc, Mutex};
+            
             println!("Loading configuration from {:?}...", config_path);
             let cfg = config::load_config(&config_path)?;
 
@@ -29,19 +31,49 @@ fn main() -> Result<()> {
             // Set initial pitch
             engine.set_voice_parameter(drone_idx, "pitch", 220.0);
 
-            println!("\nAudio preview (real-time playback coming in v0.2.0):");
+            // Wrap engine in Arc<Mutex> for sharing with audio thread
+            let engine = Arc::new(Mutex::new(engine));
 
-            // Generate a few samples to show it works
-            for i in 0..5 {
-                let sample = engine.process();
-                println!("  Sample {}: {:.6}", i, sample);
+            // Start real-time playback
+            let mut player = Player::new();
+            match player.start(engine.clone()) {
+                Ok(()) => {
+                    println!("\nPlaying ambient audio... Press Ctrl+C to stop.\n");
+                    
+                    // Wait for Ctrl+C
+                    let running = Arc::new(std::sync::atomic::AtomicBool::new(true));
+                    let r = running.clone();
+                    
+                    ctrlc::set_handler(move || {
+                        r.store(false, std::sync::atomic::Ordering::SeqCst);
+                    })?;
+                    
+                    while running.load(std::sync::atomic::Ordering::SeqCst) {
+                        std::thread::sleep(std::time::Duration::from_millis(100));
+                    }
+                    
+                    player.stop();
+                    println!("\nStopped.");
+                }
+                Err(e) => {
+                    eprintln!("Failed to start audio playback: {}", e);
+                    eprintln!("\nFalling back to preview mode...");
+                    
+                    // Fallback: show sample preview
+                    if let Ok(mut eng) = engine.lock() {
+                        for i in 0..5 {
+                            let sample = eng.process();
+                            println!("  Sample {}: {:.6}", i, sample);
+                        }
+                    }
+                    
+                    println!("\nTo generate audio, use the record command:");
+                    println!(
+                        "  drift record --config {:?} --output ambient.wav --duration 60",
+                        config_path
+                    );
+                }
             }
-
-            println!("\nTo generate audio now, use the record command:");
-            println!(
-                "  drift record --config {:?} --output ambient.wav --duration 60",
-                config_path
-            );
         }
 
         Commands::Record {

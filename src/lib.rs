@@ -10,4 +10,4 @@ pub mod synth;
 pub mod engine;
 
 pub use config::DriftConfig;
-pub use engine::Engine;
+pub use engine::{Engine, Player};

@@ -3,9 +3,11 @@
 //! Manages audio output and voice mixing.
 
 mod mixer;
+mod player;
 mod recorder;
 
 pub use mixer::{Mixer, MixerLayer};
+pub use player::{default_device_name, list_output_devices, Player};
 pub use recorder::Recorder;
 
 use crate::config::DriftConfig;
