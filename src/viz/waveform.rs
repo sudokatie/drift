@@ -70,7 +70,7 @@ impl<'a> Waveform<'a> {
 
             if y_offset >= 0 {
                 // Positive: draw from center upward
-                for dy in 0..=y_offset.abs() as u16 {
+                for dy in 0..=y_offset.unsigned_abs() {
                     if center_y >= dy {
                         let y = center_y - dy;
                         if y >= area.y && y < area.y + area.height {
@@ -80,7 +80,7 @@ impl<'a> Waveform<'a> {
                 }
             } else {
                 // Negative: draw from center downward
-                for dy in 0..=y_offset.abs() as u16 {
+                for dy in 0..=y_offset.unsigned_abs() {
                     let y = center_y + dy;
                     if y >= area.y && y < area.y + area.height {
                         buf.set_string(screen_x, y, "│", self.style);
