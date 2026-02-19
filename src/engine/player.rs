@@ -7,6 +7,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 
 use super::Engine;
+use crate::viz::SampleBuffer;
 
 /// Real-time audio player
 pub struct Player {
@@ -25,6 +26,15 @@ impl Player {
 
     /// Start playing audio from the engine
     pub fn start(&mut self, engine: Arc<Mutex<Engine>>) -> Result<()> {
+        self.start_with_viz(engine, None)
+    }
+
+    /// Start playing audio with optional visualization buffer
+    pub fn start_with_viz(
+        &mut self,
+        engine: Arc<Mutex<Engine>>,
+        viz_buffer: Option<Arc<Mutex<SampleBuffer>>>,
+    ) -> Result<()> {
         let host = cpal::default_host();
         let device = host
             .default_output_device()
@@ -38,9 +48,9 @@ impl Player {
         let running = self.running.clone();
 
         let stream = match sample_format {
-            SampleFormat::F32 => self.build_stream::<f32>(&device, &stream_config, engine, running)?,
-            SampleFormat::I16 => self.build_stream::<i16>(&device, &stream_config, engine, running)?,
-            SampleFormat::U16 => self.build_stream::<u16>(&device, &stream_config, engine, running)?,
+            SampleFormat::F32 => self.build_stream::<f32>(&device, &stream_config, engine, running, viz_buffer)?,
+            SampleFormat::I16 => self.build_stream::<i16>(&device, &stream_config, engine, running, viz_buffer)?,
+            SampleFormat::U16 => self.build_stream::<u16>(&device, &stream_config, engine, running, viz_buffer)?,
             _ => return Err(anyhow!("Unsupported sample format")),
         };
 
@@ -67,6 +77,7 @@ impl Player {
         config: &StreamConfig,
         engine: Arc<Mutex<Engine>>,
         running: Arc<AtomicBool>,
+        viz_buffer: Option<Arc<Mutex<SampleBuffer>>>,
     ) -> Result<Stream> {
         let channels = config.channels as usize;
 
@@ -84,6 +95,14 @@ impl Player {
                 if let Ok(mut eng) = engine.try_lock() {
                     for frame in data.chunks_mut(channels) {
                         let sample = eng.process() as f32;
+                        
+                        // Push sample to visualization buffer if available
+                        if let Some(ref viz) = viz_buffer {
+                            if let Ok(mut buf) = viz.try_lock() {
+                                buf.push(sample);
+                            }
+                        }
+                        
                         for channel_sample in frame.iter_mut() {
                             *channel_sample = T::from_sample(sample);
                         }
