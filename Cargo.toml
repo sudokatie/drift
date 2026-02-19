@@ -44,5 +44,9 @@ ctrlc = "3.4"
 # MIDI
 midir = "0.10"
 
+# TUI
+ratatui = "0.28"
+crossterm = "0.28"
+
 [dev-dependencies]
 tempfile = "3"
