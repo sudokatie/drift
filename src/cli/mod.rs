@@ -31,6 +31,10 @@ pub enum Commands {
         /// MIDI channel (0-15)
         #[arg(long, default_value = "0")]
         midi_channel: u8,
+
+        /// Show waveform visualization in terminal
+        #[arg(long)]
+        viz: bool,
     },
 
     /// Record to a WAV file

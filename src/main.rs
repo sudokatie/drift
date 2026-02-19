@@ -20,6 +20,7 @@ fn main() -> Result<()> {
             midi,
             midi_port,
             midi_channel,
+            viz,
         } => {
             use std::sync::{Arc, Mutex};
 
@@ -97,41 +98,67 @@ fn main() -> Result<()> {
                 // Audio output mode
                 let engine = Arc::new(Mutex::new(engine));
 
-                let mut player = Player::new();
-                match player.start(engine.clone()) {
-                    Ok(()) => {
-                        println!("\nPlaying ambient audio... Press Ctrl+C to stop.\n");
+                if viz {
+                    // Visualization mode
+                    use drift::viz::{run_viz, VizState};
 
-                        let running = Arc::new(std::sync::atomic::AtomicBool::new(true));
-                        let r = running.clone();
+                    let viz_state = Arc::new(Mutex::new(VizState::new(1024)));
+                    let sample_buffer = {
+                        let state = viz_state.lock().unwrap();
+                        state.sample_buffer.clone()
+                    };
 
-                        ctrlc::set_handler(move || {
-                            r.store(false, std::sync::atomic::Ordering::SeqCst);
-                        })?;
-
-                        while running.load(std::sync::atomic::Ordering::SeqCst) {
-                            std::thread::sleep(std::time::Duration::from_millis(100));
-                        }
-
-                        player.stop();
-                        println!("\nStopped.");
-                    }
-                    Err(e) => {
-                        eprintln!("Failed to start audio playback: {}", e);
-                        eprintln!("\nFalling back to preview mode...");
-
-                        if let Ok(mut eng) = engine.lock() {
-                            for i in 0..5 {
-                                let sample = eng.process();
-                                println!("  Sample {}: {:.6}", i, sample);
+                    let mut player = Player::new();
+                    match player.start_with_viz(engine.clone(), Some(sample_buffer)) {
+                        Ok(()) => {
+                            // Run TUI - it handles its own event loop and cleanup
+                            if let Err(e) = run_viz(engine.clone(), viz_state.clone()) {
+                                eprintln!("Visualization error: {}", e);
                             }
+                            player.stop();
                         }
+                        Err(e) => {
+                            eprintln!("Failed to start audio: {}", e);
+                        }
+                    }
+                } else {
+                    // Normal audio mode
+                    let mut player = Player::new();
+                    match player.start(engine.clone()) {
+                        Ok(()) => {
+                            println!("\nPlaying ambient audio... Press Ctrl+C to stop.\n");
 
-                        println!("\nTo generate audio, use the record command:");
-                        println!(
-                            "  drift record --config {:?} --output ambient.wav --duration 60",
-                            config_path
-                        );
+                            let running = Arc::new(std::sync::atomic::AtomicBool::new(true));
+                            let r = running.clone();
+
+                            ctrlc::set_handler(move || {
+                                r.store(false, std::sync::atomic::Ordering::SeqCst);
+                            })?;
+
+                            while running.load(std::sync::atomic::Ordering::SeqCst) {
+                                std::thread::sleep(std::time::Duration::from_millis(100));
+                            }
+
+                            player.stop();
+                            println!("\nStopped.");
+                        }
+                        Err(e) => {
+                            eprintln!("Failed to start audio playback: {}", e);
+                            eprintln!("\nFalling back to preview mode...");
+
+                            if let Ok(mut eng) = engine.lock() {
+                                for i in 0..5 {
+                                    let sample = eng.process();
+                                    println!("  Sample {}: {:.6}", i, sample);
+                                }
+                            }
+
+                            println!("\nTo generate audio, use the record command:");
+                            println!(
+                                "  drift record --config {:?} --output ambient.wav --duration 60",
+                                config_path
+                            );
+                        }
                     }
                 }
             }
