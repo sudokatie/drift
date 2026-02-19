@@ -16,6 +16,7 @@ Drift transforms data into ambient soundscapes. Weather becomes drones, git comm
   - LFO modulation for filter and pitch (vibrato)
   - Sub oscillator and noise layer
 - **Output**: Real-time audio playback, WAV file recording, MIDI output
+- **Visualization**: Terminal waveform display with `--viz` flag
 - **CLI**: Full command suite (play, record, devices, midi-ports, monitor, check, init)
 
 ## Installation
@@ -44,6 +45,9 @@ drift devices
 
 # List MIDI output ports
 drift midi-ports
+
+# Play with terminal waveform visualization
+drift play --config drift.yaml --viz
 
 # Play with MIDI output instead of audio
 drift play --config drift.yaml --midi
@@ -151,15 +155,29 @@ layers:
 - **quantize**: Snap to nearest musical scale degree (pentatonic, major, minor, dorian, whole tone)
 - **pattern**: Euclidean rhythm generator (converts data density to rhythmic patterns)
 
+## Visualization
+
+The `--viz` flag enables a terminal-based waveform display:
+
+```bash
+drift play --config drift.yaml --viz
+```
+
+This opens a TUI showing:
+- Real-time waveform of the audio output
+- Playback status (playing/paused)
+- Controls: Space to pause, q to quit
+
 ## Roadmap
 
-### v0.2 (Planned)
-- [ ] MIDI output for external synth control
-- [ ] Real-time audio playback (live mode)
+### v0.2 (Complete)
+- [x] MIDI output for external synth control
+- [x] Real-time audio playback (live mode)
+- [x] True exponential mapper implementation
 
-### v0.3 (Planned)
-- [ ] Visual companion (waveform display)
-- [ ] True exponential mapper implementation
+### v0.3 (Current)
+- [x] Visual companion (waveform display)
+- [ ] Spectrum analyzer
 
 See FEATURE-BACKLOG.md in the clawd repo for detailed acceptance criteria.
 
