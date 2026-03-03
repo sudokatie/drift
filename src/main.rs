@@ -465,6 +465,81 @@ fn main() -> Result<()> {
                 println!("Created drift.yaml with example configuration.");
             }
         }
+
+        Commands::Preset(preset_cmd) => {
+            use cli::PresetCommands;
+            use drift::Preset;
+
+            match preset_cmd {
+                PresetCommands::List { category } => {
+                    let presets = if let Some(cat) = category {
+                        Preset::by_category(&cat)
+                    } else {
+                        Preset::all()
+                    };
+
+                    if presets.is_empty() {
+                        println!("No presets found.");
+                        return Ok(());
+                    }
+
+                    println!("Available presets:\n");
+                    
+                    let mut current_category = "";
+                    for preset in presets {
+                        if preset.category != current_category {
+                            if !current_category.is_empty() {
+                                println!();
+                            }
+                            println!("[{}]", preset.category);
+                            current_category = preset.category;
+                        }
+                        println!("  {} - {}", preset.name, preset.description);
+                    }
+
+                    println!("\nUse 'drift preset use <name>' to copy a preset to drift.yaml");
+                }
+
+                PresetCommands::Use { name, output, force } => {
+                    let preset = match Preset::by_name(&name) {
+                        Some(p) => p,
+                        None => {
+                            eprintln!("Preset '{}' not found.", name);
+                            eprintln!("Use 'drift preset list' to see available presets.");
+                            std::process::exit(1);
+                        }
+                    };
+
+                    if output.exists() && !force {
+                        eprintln!("File {:?} already exists. Use --force to overwrite.", output);
+                        std::process::exit(1);
+                    }
+
+                    std::fs::write(&output, preset.config)?;
+                    println!("Created {:?} from preset '{}'", output, preset.name);
+                    println!("\nDescription: {}", preset.description);
+                    println!("\nYou can now customize this config or run:");
+                    println!("  drift play --config {:?}", output);
+                }
+
+                PresetCommands::Show { name } => {
+                    let preset = match Preset::by_name(&name) {
+                        Some(p) => p,
+                        None => {
+                            eprintln!("Preset '{}' not found.", name);
+                            eprintln!("Use 'drift preset list' to see available presets.");
+                            std::process::exit(1);
+                        }
+                    };
+
+                    println!("Preset: {}", preset.name);
+                    println!("Category: {}", preset.category);
+                    println!("Description: {}", preset.description);
+                    println!("\nConfiguration:\n");
+                    println!("{}", preset.config);
+                }
+            }
+        }
     }
 
     Ok(())

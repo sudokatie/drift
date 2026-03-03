@@ -74,4 +74,38 @@ pub enum Commands {
 
     /// Generate an example configuration file
     Init,
+
+    /// Manage built-in presets
+    #[command(subcommand)]
+    Preset(PresetCommands),
+}
+
+#[derive(Subcommand)]
+pub enum PresetCommands {
+    /// List all available presets
+    List {
+        /// Filter by category
+        #[arg(short, long)]
+        category: Option<String>,
+    },
+
+    /// Copy a preset to use as starting point
+    Use {
+        /// Preset name
+        name: String,
+
+        /// Output file path (defaults to drift.yaml)
+        #[arg(short, long, default_value = "drift.yaml")]
+        output: PathBuf,
+
+        /// Overwrite if file exists
+        #[arg(short, long)]
+        force: bool,
+    },
+
+    /// Show preset details
+    Show {
+        /// Preset name
+        name: String,
+    },
 }
