@@ -46,8 +46,15 @@ drift devices
 # List MIDI output ports
 drift midi-ports
 
+# List MIDI input ports
+drift midi-input-ports
+
 # Play with terminal waveform visualization
 drift play --config drift.yaml --viz
+
+# Play with MIDI input control (CC and notes)
+drift play --config drift.yaml --midi-input
+drift play --config drift.yaml --midi-input --midi-input-port "Arturia" --midi-input-channel 0
 
 # Play with MIDI output instead of audio
 drift play --config drift.yaml --midi
@@ -168,6 +175,24 @@ This opens a TUI showing:
 - Playback status (playing/paused)
 - Controls: Space to pause, q to quit
 
+## MIDI Input Control
+
+Control synthesis parameters in real-time with a MIDI controller:
+
+```bash
+drift play --config drift.yaml --midi-input
+```
+
+Default CC mappings:
+- **CC 1** (Mod Wheel): Filter cutoff (200-8000 Hz)
+- **CC 7** (Volume): Master volume (0-1)
+- **CC 74** (Filter): Filter cutoff (200-8000 Hz)
+- **CC 71** (Resonance): Filter resonance (0.5-5.0)
+- **Notes**: Set pitch frequency from MIDI note number
+
+Use `--midi-input-port NAME` to select a specific input port (substring match).
+Use `--midi-input-channel N` to filter to a specific channel (0-15).
+
 ## Roadmap
 
 ### v0.2 (Complete)
@@ -177,6 +202,9 @@ This opens a TUI showing:
 
 ### v0.3 (Current)
 - [x] Visual companion (waveform display)
+
+### v0.4 (Current)
+- [x] MIDI input for real-time parameter control
 - [ ] Spectrum analyzer
 
 See FEATURE-BACKLOG.md in the clawd repo for detailed acceptance criteria.

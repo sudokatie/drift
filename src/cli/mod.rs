@@ -32,6 +32,18 @@ pub enum Commands {
         #[arg(long, default_value = "0")]
         midi_channel: u8,
 
+        /// Enable MIDI input for real-time control
+        #[arg(long)]
+        midi_input: bool,
+
+        /// MIDI input port name (substring match)
+        #[arg(long)]
+        midi_input_port: Option<String>,
+
+        /// MIDI input channel filter (0-15, omit for all channels)
+        #[arg(long)]
+        midi_input_channel: Option<u8>,
+
         /// Show waveform visualization in terminal
         #[arg(long)]
         viz: bool,
@@ -57,6 +69,9 @@ pub enum Commands {
 
     /// List available MIDI output ports
     MidiPorts,
+
+    /// List available MIDI input ports
+    MidiInputPorts,
 
     /// Monitor data sources (coming soon)
     Monitor {

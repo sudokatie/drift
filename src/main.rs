@@ -4,7 +4,10 @@ use anyhow::Result;
 use clap::Parser;
 use cpal::traits::{DeviceTrait, HostTrait};
 use drift::config::{self, SourceKind};
-use drift::engine::{list_midi_ports, Engine, MidiConfig, MidiPlayer, Player, Recorder};
+use drift::engine::{
+    list_midi_input_ports, list_midi_ports, CcMapping, Engine, MidiConfig, MidiInputConfig,
+    MidiInputListener, MidiPlayer, Player, Recorder, VoiceTrigger,
+};
 use drift::sources::{GitConfig, GitSource, PriceConfig, PriceSource, Source, SystemSource, WeatherConfig, WeatherSource};
 
 mod cli;
@@ -20,6 +23,9 @@ fn main() -> Result<()> {
             midi,
             midi_port,
             midi_channel,
+            midi_input,
+            midi_input_port,
+            midi_input_channel,
             viz,
         } => {
             use std::sync::{Arc, Mutex};
@@ -98,6 +104,37 @@ fn main() -> Result<()> {
                 // Audio output mode
                 let engine = Arc::new(Mutex::new(engine));
 
+                // Set up MIDI input if requested
+                let midi_listener = if midi_input {
+                    let mut input_config = MidiInputConfig::default_mappings();
+                    if let Some(channel) = midi_input_channel {
+                        input_config.with_channel(channel);
+                    }
+                    // Add pitch control from notes
+                    input_config.add_note_mapping(
+                        drift::engine::NoteMapping::pitch_from_note(drone_idx),
+                    );
+
+                    match MidiInputListener::new(midi_input_port.as_deref(), input_config) {
+                        Ok(listener) => {
+                            println!("  MIDI input: enabled");
+                            Some(listener)
+                        }
+                        Err(e) => {
+                            eprintln!("Failed to open MIDI input: {}", e);
+                            eprintln!("\nAvailable MIDI input ports:");
+                            if let Ok(ports) = list_midi_input_ports() {
+                                for port in ports {
+                                    eprintln!("  - {}", port);
+                                }
+                            }
+                            None
+                        }
+                    }
+                } else {
+                    None
+                };
+
                 if viz {
                     // Visualization mode
                     use drift::viz::{run_viz, VizState};
@@ -121,12 +158,25 @@ fn main() -> Result<()> {
                             eprintln!("Failed to start audio: {}", e);
                         }
                     }
+
+                    if let Some(listener) = midi_listener {
+                        listener.stop();
+                    }
                 } else {
                     // Normal audio mode
                     let mut player = Player::new();
                     match player.start(engine.clone()) {
                         Ok(()) => {
-                            println!("\nPlaying ambient audio... Press Ctrl+C to stop.\n");
+                            if midi_listener.is_some() {
+                                println!("\nPlaying with MIDI control... Press Ctrl+C to stop.");
+                                println!("  CC 1 (Mod): Filter cutoff");
+                                println!("  CC 7 (Vol): Volume");
+                                println!("  CC 74: Filter cutoff");
+                                println!("  CC 71: Resonance");
+                                println!("  Notes: Set pitch\n");
+                            } else {
+                                println!("\nPlaying ambient audio... Press Ctrl+C to stop.\n");
+                            }
 
                             let running = Arc::new(std::sync::atomic::AtomicBool::new(true));
                             let r = running.clone();
@@ -136,10 +186,46 @@ fn main() -> Result<()> {
                             })?;
 
                             while running.load(std::sync::atomic::Ordering::SeqCst) {
-                                std::thread::sleep(std::time::Duration::from_millis(100));
+                                // Process MIDI input if active
+                                if let Some(ref listener) = midi_listener {
+                                    // Apply parameter updates
+                                    for update in listener.poll_parameters() {
+                                        if let Ok(mut eng) = engine.lock() {
+                                            eng.set_voice_parameter(
+                                                drone_idx,
+                                                &update.parameter,
+                                                update.value,
+                                            );
+                                        }
+                                    }
+
+                                    // Apply note triggers
+                                    for trigger in listener.poll_triggers() {
+                                        if let Ok(mut eng) = engine.lock() {
+                                            match trigger {
+                                                VoiceTrigger::SetPitch {
+                                                    voice_index,
+                                                    frequency,
+                                                } => {
+                                                    eng.set_voice_parameter(
+                                                        voice_index,
+                                                        "pitch",
+                                                        frequency,
+                                                    );
+                                                }
+                                                _ => {}
+                                            }
+                                        }
+                                    }
+                                }
+
+                                std::thread::sleep(std::time::Duration::from_millis(10));
                             }
 
                             player.stop();
+                            if let Some(listener) = midi_listener {
+                                listener.stop();
+                            }
                             println!("\nStopped.");
                         }
                         Err(e) => {
@@ -220,6 +306,27 @@ fn main() -> Result<()> {
                     eprintln!("  Error listing MIDI ports: {}", e);
                 }
             }
+        }
+
+        Commands::MidiInputPorts => {
+            println!("Available MIDI input ports:\n");
+
+            match list_midi_input_ports() {
+                Ok(ports) => {
+                    if ports.is_empty() {
+                        println!("  No MIDI input ports found.");
+                    } else {
+                        for (i, port) in ports.iter().enumerate() {
+                            println!("  {}. {}", i + 1, port);
+                        }
+                    }
+                }
+                Err(e) => {
+                    eprintln!("  Error listing MIDI input ports: {}", e);
+                }
+            }
+
+            println!("\nUse with: drift play --midi-input [--midi-input-port NAME]");
         }
 
         Commands::Devices => {

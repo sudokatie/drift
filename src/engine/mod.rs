@@ -3,11 +3,17 @@
 //! Manages audio output and voice mixing.
 
 mod midi;
+mod midi_input;
 mod mixer;
 mod player;
 mod recorder;
 
 pub use midi::{default_port_name, list_midi_ports, MidiConfig, MidiMessage, MidiPlayer};
+pub use midi_input::{
+    default_input_port_name, list_midi_input_ports, CcMapping, MidiInputConfig, MidiInputEvent,
+    MidiInputListener, NoteMapping, NoteTriggerAction, ParameterUpdate, VoiceTrigger,
+    midi_note_to_frequency,
+};
 pub use mixer::{Mixer, MixerLayer};
 pub use player::{default_device_name, list_output_devices, Player};
 pub use recorder::Recorder;
