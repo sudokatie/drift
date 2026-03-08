@@ -20,6 +20,51 @@ pub struct DriftConfig {
     /// Sound layers
     #[serde(default)]
     pub layers: Vec<LayerConfig>,
+    
+    /// OSC output settings (optional)
+    #[serde(default)]
+    pub osc: Option<OscConfig>,
+}
+
+/// OSC (Open Sound Control) output configuration
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct OscConfig {
+    /// Whether OSC output is enabled
+    #[serde(default)]
+    pub enabled: bool,
+    
+    /// Target host (default: 127.0.0.1)
+    #[serde(default = "default_osc_host")]
+    pub host: String,
+    
+    /// Target port (default: 9000)
+    #[serde(default = "default_osc_port")]
+    pub port: u16,
+    
+    /// Address prefix (default: /drift)
+    #[serde(default = "default_osc_prefix")]
+    pub prefix: String,
+    
+    /// Updates per second (default: 60)
+    #[serde(default = "default_osc_rate")]
+    pub updates_per_second: u32,
+}
+
+fn default_osc_host() -> String { "127.0.0.1".to_string() }
+fn default_osc_port() -> u16 { 9000 }
+fn default_osc_prefix() -> String { "/drift".to_string() }
+fn default_osc_rate() -> u32 { 60 }
+
+impl Default for OscConfig {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            host: default_osc_host(),
+            port: default_osc_port(),
+            prefix: default_osc_prefix(),
+            updates_per_second: default_osc_rate(),
+        }
+    }
 }
 
 impl DriftConfig {
@@ -292,6 +337,7 @@ mappings:
                     volume: 1.0,
                 }
             ],
+            osc: None,
         };
         
         assert!(config.validate().is_ok());
@@ -322,8 +368,36 @@ mappings:
                     volume: 1.0,
                 }
             ],
+            osc: None,
         };
         
         assert!(config.validate().is_err());
+    }
+
+    #[test]
+    fn test_osc_config_defaults() {
+        let config = OscConfig::default();
+        assert!(!config.enabled);
+        assert_eq!(config.host, "127.0.0.1");
+        assert_eq!(config.port, 9000);
+        assert_eq!(config.prefix, "/drift");
+        assert_eq!(config.updates_per_second, 60);
+    }
+
+    #[test]
+    fn test_osc_config_yaml() {
+        let yaml = r#"
+enabled: true
+host: "192.168.1.100"
+port: 8000
+prefix: "/app"
+updates_per_second: 30
+"#;
+        let config: OscConfig = serde_yaml::from_str(yaml).unwrap();
+        assert!(config.enabled);
+        assert_eq!(config.host, "192.168.1.100");
+        assert_eq!(config.port, 8000);
+        assert_eq!(config.prefix, "/app");
+        assert_eq!(config.updates_per_second, 30);
     }
 }

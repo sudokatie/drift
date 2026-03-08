@@ -5,6 +5,7 @@
 mod midi;
 mod midi_input;
 mod mixer;
+mod osc;
 mod player;
 mod recorder;
 
@@ -16,6 +17,7 @@ pub use midi_input::{
 };
 pub use mixer::{Mixer, MixerLayer};
 pub use player::{default_device_name, list_output_devices, Player};
+pub use osc::{OscConfig, OscMappings, OscOutput};
 pub use recorder::Recorder;
 
 use crate::config::DriftConfig;
@@ -127,6 +129,7 @@ mod tests {
             },
             sources: vec![],
             layers: vec![],
+            osc: None,
         }
     }
 
