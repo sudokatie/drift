@@ -15,7 +15,7 @@ Drift transforms data into ambient soundscapes. Weather becomes drones, git comm
   - Biquad filter (low-pass, high-pass, band-pass) with resonance
   - LFO modulation for filter and pitch (vibrato)
   - Sub oscillator and noise layer
-- **Output**: Real-time audio playback, WAV file recording, MIDI output
+- **Output**: Real-time audio playback, WAV file recording, MIDI output, OSC output
 - **Visualization**: Terminal waveform display with `--viz` flag
 - **CLI**: Full command suite (play, record, devices, midi-ports, monitor, check, init)
 
@@ -192,6 +192,28 @@ Default CC mappings:
 
 Use `--midi-input-port NAME` to select a specific input port (substring match).
 Use `--midi-input-channel N` to filter to a specific channel (0-15).
+
+## OSC Output
+
+Send synthesis parameters to external software via Open Sound Control:
+
+```yaml
+osc:
+  enabled: true
+  host: "127.0.0.1"
+  port: 9000
+  prefix: "/drift"
+  updates_per_second: 60
+```
+
+When enabled, drift sends OSC messages at the configured rate:
+- `/drift/amplitude` - Current amplitude (0.0-1.0)
+- `/drift/pitch` - Current pitch in Hz
+- `/drift/filter` - Current filter cutoff in Hz
+- `/drift/param/<name>` - Custom parameters
+- `/drift/data/<source>` - Data source values
+
+Use this to sync visuals (TouchDesigner, Max/MSP, Processing) with the audio.
 
 ## Roadmap
 
