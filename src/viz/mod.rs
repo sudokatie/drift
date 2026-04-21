@@ -2,12 +2,17 @@
 //!
 //! Provides a TUI interface showing:
 //! - Waveform display
-//! - Spectrum analyzer (optional)
+//! - Spectrum analyzer (real-time FFT)
 //! - Current data values
 //! - Playback controls
 
+mod spectrum;
 mod waveform;
 
+pub use spectrum::{
+    calculate_bar_frequencies, compute_fft, map_bins_to_bars, SpectrumBar, SpectrumWidget,
+    DEFAULT_BAR_COUNT, DEFAULT_FFT_SIZE, MAX_BAR_COUNT, MIN_BAR_COUNT, PEAK_DECAY_RATE, SAMPLE_RATE,
+};
 pub use waveform::Waveform;
 
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -76,14 +81,54 @@ pub struct VizState {
     pub sample_buffer: Arc<Mutex<SampleBuffer>>,
     pub running: Arc<AtomicBool>,
     pub paused: bool,
+    /// Whether spectrum analyzer is enabled
+    pub spectrum_enabled: bool,
+    /// Number of spectrum bars to display
+    pub spectrum_bars: usize,
+    /// Peak hold values for spectrum bars
+    pub spectrum_peaks: Vec<SpectrumBar>,
 }
 
 impl VizState {
     pub fn new(buffer_size: usize) -> Self {
+        let spectrum_bars = DEFAULT_BAR_COUNT;
+        let frequencies = calculate_bar_frequencies(spectrum_bars, SAMPLE_RATE);
+        let spectrum_peaks = frequencies
+            .into_iter()
+            .map(SpectrumBar::new)
+            .collect();
+
         Self {
             sample_buffer: Arc::new(Mutex::new(SampleBuffer::new(buffer_size))),
             running: Arc::new(AtomicBool::new(true)),
             paused: false,
+            spectrum_enabled: true,
+            spectrum_bars,
+            spectrum_peaks,
+        }
+    }
+
+    /// Update the number of spectrum bars
+    pub fn set_spectrum_bars(&mut self, count: usize) {
+        let count = count.clamp(MIN_BAR_COUNT, MAX_BAR_COUNT);
+        if count != self.spectrum_bars {
+            self.spectrum_bars = count;
+            let frequencies = calculate_bar_frequencies(count, SAMPLE_RATE);
+            self.spectrum_peaks = frequencies.into_iter().map(SpectrumBar::new).collect();
+        }
+    }
+
+    /// Update spectrum bars with new magnitude data
+    pub fn update_spectrum(&mut self, magnitudes: &[f32]) {
+        for (bar, &mag) in self.spectrum_peaks.iter_mut().zip(magnitudes.iter()) {
+            bar.update(mag);
+        }
+    }
+
+    /// Apply peak decay to all spectrum bars
+    pub fn decay_spectrum_peaks(&mut self) {
+        for bar in &mut self.spectrum_peaks {
+            bar.decay_peak();
         }
     }
 
@@ -117,6 +162,26 @@ pub fn run_viz(
             }
         }
 
+        // Update spectrum data before drawing
+        {
+            let mut state_guard = state.lock().unwrap();
+            if state_guard.spectrum_enabled && !state_guard.paused {
+                // Get samples for FFT
+                let buffer = state_guard.sample_buffer.lock().unwrap();
+                let samples = buffer.get_recent(DEFAULT_FFT_SIZE);
+                drop(buffer);
+
+                // Compute FFT and map to bars
+                let magnitudes = compute_fft(&samples, DEFAULT_FFT_SIZE);
+                let bar_magnitudes =
+                    map_bins_to_bars(&magnitudes, state_guard.spectrum_bars, SAMPLE_RATE);
+
+                // Update spectrum bars
+                state_guard.update_spectrum(&bar_magnitudes);
+                state_guard.decay_spectrum_peaks();
+            }
+        }
+
         // Draw UI
         terminal.draw(|f| {
             let state_guard = state.lock().unwrap();
@@ -139,6 +204,20 @@ pub fn run_viz(
                         let mut state_guard = state.lock().unwrap();
                         state_guard.paused = !state_guard.paused;
                     }
+                    (KeyCode::Char('s'), _) => {
+                        let mut state_guard = state.lock().unwrap();
+                        state_guard.spectrum_enabled = !state_guard.spectrum_enabled;
+                    }
+                    (KeyCode::Char('+') | KeyCode::Char('='), _) => {
+                        let mut state_guard = state.lock().unwrap();
+                        let new_count = (state_guard.spectrum_bars + 8).min(MAX_BAR_COUNT);
+                        state_guard.set_spectrum_bars(new_count);
+                    }
+                    (KeyCode::Char('-'), _) => {
+                        let mut state_guard = state.lock().unwrap();
+                        let new_count = state_guard.spectrum_bars.saturating_sub(8).max(MIN_BAR_COUNT);
+                        state_guard.set_spectrum_bars(new_count);
+                    }
                     _ => {}
                 }
             }
@@ -155,20 +234,41 @@ pub fn run_viz(
 fn draw_ui(f: &mut Frame, state: &VizState) {
     let area = f.area();
 
-    // Layout: waveform on top, status at bottom
-    let chunks = Layout::default()
-        .direction(Direction::Vertical)
-        .constraints([
-            Constraint::Min(5),      // Waveform
-            Constraint::Length(3),   // Status
-        ])
-        .split(area);
+    if state.spectrum_enabled {
+        // Layout: waveform on top, spectrum in middle, status at bottom
+        // Recalculate to give status bar priority
+        let main_area = Rect::new(area.x, area.y, area.width, area.height.saturating_sub(3));
+        let status_area = Rect::new(area.x, area.y + main_area.height, area.width, 3.min(area.height));
 
-    // Draw waveform
-    draw_waveform(f, chunks[0], state);
+        let viz_chunks = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
+            .split(main_area);
 
-    // Draw status bar
-    draw_status(f, chunks[1], state);
+        // Draw waveform
+        draw_waveform(f, viz_chunks[0], state);
+
+        // Draw spectrum
+        draw_spectrum(f, viz_chunks[1], state);
+
+        // Draw status bar
+        draw_status(f, status_area, state);
+    } else {
+        // Spectrum disabled: waveform takes full space
+        let chunks = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([
+                Constraint::Min(5),      // Waveform
+                Constraint::Length(3),   // Status
+            ])
+            .split(area);
+
+        // Draw waveform
+        draw_waveform(f, chunks[0], state);
+
+        // Draw status bar
+        draw_status(f, chunks[1], state);
+    }
 }
 
 fn draw_waveform(f: &mut Frame, area: Rect, state: &VizState) {
@@ -183,15 +283,34 @@ fn draw_waveform(f: &mut Frame, area: Rect, state: &VizState) {
     f.render_widget(waveform, area);
 }
 
+fn draw_spectrum(f: &mut Frame, area: Rect, state: &VizState) {
+    let widget = SpectrumWidget::new(&state.spectrum_peaks)
+        .block(Block::default().borders(Borders::ALL).title(" Spectrum "));
+
+    f.render_widget(widget, area);
+}
+
 fn draw_status(f: &mut Frame, area: Rect, state: &VizState) {
     let status = if state.paused { "PAUSED" } else { "PLAYING" };
     let status_color = if state.paused { Color::Yellow } else { Color::Green };
 
+    let spectrum_status = if state.spectrum_enabled {
+        format!("ON ({})", state.spectrum_bars)
+    } else {
+        "OFF".to_string()
+    };
+    let spectrum_color = if state.spectrum_enabled {
+        Color::Cyan
+    } else {
+        Color::DarkGray
+    };
+
     let text = Line::from(vec![
-        Span::raw("  Status: "),
+        Span::raw("  "),
         Span::styled(status, Style::default().fg(status_color)),
-        Span::raw("  |  "),
-        Span::raw("Space: pause  |  q: quit"),
+        Span::raw("  |  Spectrum: "),
+        Span::styled(spectrum_status, Style::default().fg(spectrum_color)),
+        Span::raw("  |  Space: pause  s: spectrum  +/-: bars  q: quit"),
     ]);
 
     let paragraph = Paragraph::new(text)
@@ -258,5 +377,53 @@ mod tests {
         assert!(state.is_running());
         state.stop();
         assert!(!state.is_running());
+    }
+
+    #[test]
+    fn test_viz_state_spectrum_defaults() {
+        let state = VizState::new(100);
+        assert!(state.spectrum_enabled);
+        assert_eq!(state.spectrum_bars, DEFAULT_BAR_COUNT);
+        assert_eq!(state.spectrum_peaks.len(), DEFAULT_BAR_COUNT);
+    }
+
+    #[test]
+    fn test_viz_state_set_spectrum_bars() {
+        let mut state = VizState::new(100);
+        state.set_spectrum_bars(64);
+        assert_eq!(state.spectrum_bars, 64);
+        assert_eq!(state.spectrum_peaks.len(), 64);
+    }
+
+    #[test]
+    fn test_viz_state_set_spectrum_bars_clamp_min() {
+        let mut state = VizState::new(100);
+        state.set_spectrum_bars(2);
+        assert_eq!(state.spectrum_bars, MIN_BAR_COUNT);
+    }
+
+    #[test]
+    fn test_viz_state_set_spectrum_bars_clamp_max() {
+        let mut state = VizState::new(100);
+        state.set_spectrum_bars(500);
+        assert_eq!(state.spectrum_bars, MAX_BAR_COUNT);
+    }
+
+    #[test]
+    fn test_viz_state_update_spectrum() {
+        let mut state = VizState::new(100);
+        let magnitudes = vec![-20.0; state.spectrum_bars];
+        state.update_spectrum(&magnitudes);
+        assert_eq!(state.spectrum_peaks[0].magnitude, -20.0);
+    }
+
+    #[test]
+    fn test_viz_state_decay_spectrum_peaks() {
+        let mut state = VizState::new(100);
+        state.spectrum_peaks[0].update(-10.0);
+        state.spectrum_peaks[0].update(-80.0);
+        let peak_before = state.spectrum_peaks[0].peak;
+        state.decay_spectrum_peaks();
+        assert!(state.spectrum_peaks[0].peak < peak_before);
     }
 }

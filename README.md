@@ -164,7 +164,7 @@ layers:
 
 ## Visualization
 
-The `--viz` flag enables a terminal-based waveform display:
+The `--viz` flag enables a terminal-based audio visualization:
 
 ```bash
 drift play --config drift.yaml --viz
@@ -172,8 +172,20 @@ drift play --config drift.yaml --viz
 
 This opens a TUI showing:
 - Real-time waveform of the audio output
+- Real-time spectrum analyzer (FFT-based frequency display)
 - Playback status (playing/paused)
-- Controls: Space to pause, q to quit
+
+Controls:
+- **Space**: Pause/resume playback
+- **s**: Toggle spectrum analyzer on/off
+- **+/-**: Increase/decrease spectrum bars (8-128)
+- **q**: Quit visualization
+
+The spectrum analyzer features:
+- Cooley-Tukey radix-2 FFT (1024-point, pure Rust)
+- Logarithmic frequency scaling (20Hz-20kHz)
+- Peak hold with exponential decay
+- Color gradient: cyan (low) to green (mid) to magenta (high)
 
 ## MIDI Input Control
 
@@ -222,12 +234,12 @@ Use this to sync visuals (TouchDesigner, Max/MSP, Processing) with the audio.
 - [x] Real-time audio playback (live mode)
 - [x] True exponential mapper implementation
 
-### v0.3 (Current)
+### v0.3 (Complete)
 - [x] Visual companion (waveform display)
+- [x] Spectrum analyzer (real-time FFT with peak hold)
 
 ### v0.4 (Current)
 - [x] MIDI input for real-time parameter control
-- [ ] Spectrum analyzer
 
 See FEATURE-BACKLOG.md in the clawd repo for detailed acceptance criteria.
 
